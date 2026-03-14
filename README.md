@@ -1,4 +1,4 @@
-# PXL Didactiek Coach
+# PXL Lesvoorbereidingscoach
 Interactieve web-tool voor studenten van de PXL-lerarenopleiding om lesvoorbereidingen te toetsen aan de hand van het didactisch model.
 
 ## Installatie
