@@ -4,13 +4,7 @@ from kennisbank import KNOWLEDGE_BASE  # Zorg dat je kennisbank.py dit gebruikt
 
 # Configuratie
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel('gemini-1.5-flash')
-try:
-    models = genai.list_models()
-    for m in models:
-        st.write(f"Beschikbaar model: {m.name}")
-except Exception as e:
-    st.error(f"Fout bij verbinden met Google AI: {e}")
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 def geef_tussentijdse_feedback(sectie, input_data):
     # Haal de specifieke theorie op uit je KNOWLEDGE_BASE
