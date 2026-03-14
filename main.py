@@ -7,55 +7,65 @@ model = genai.GenerativeModel('gemini-pro')
 
 st.set_page_config(page_title="PXL Lesvoorbereiding", layout="wide")
 
-# --- PXL HUISSTIJL (CSS) ---
+# PXL Huisstijl (CSS)
 st.markdown("""
     <style>
     body { font-family: Arial, sans-serif; color: #030203; }
-    h1, h2, h3 { font-family: 'Arial Black', sans-serif; color: #030203; text-transform: uppercase; }
+    h1, h2 { font-family: 'Arial Black', sans-serif; color: #030203; text-transform: uppercase; }
     h1 { border-bottom: 3px solid #AE9A64; }
     .stButton>button { background-color: #AE9A64; color: white; border: none; font-weight: bold; }
-    .stTextArea label { color: #030203; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("PXL Lesvoorbereidingsassistent 🎓")
+st.title("PXL Lesvoorbereidingsformulier 🎓")
 
-# --- LOGICA & STRUCTUUR ---
-# Structuur op basis van de Kijkwijzer [cite: 5, 9, 10, 96, 161]
-with st.form("pxl_template"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("1. Identificatie & Beginsituatie")
-        school = st.text_input("School")
-        lesonderwerp = st.text_input("Lesonderwerp")
-        beginsituatie = st.text_area("Didactische beginsituatie (Praktisch, Leerling, Vakinhoudelijk) [cite: 10, 23]", height=150)
-        
-        st.subheader("2. Lesdoelen & Leerplan")
-        doelen = st.text_area("Lesdoelen (Taxonomie van Bloom, CV/PV/AV) [cite: 96, 97]", height=150)
-        
-    with col2:
-        st.subheader("3. Lesuitwerking")
-        uitwerking = st.text_area("Aanknopings-, Uitvoerings- & Afrondingsfase [cite: 153, 157]", height=250)
-        
-        st.subheader("4. Lesschema")
-        schema = st.text_area("Kern van de les (Bordschema/Kernwoorden) [cite: 161, 164]", height=150)
-        
-        submitted = st.form_submit_button("Genereer didactisch advies")
+# Sessie-state om data te onthouden tussen stappen
+if 'data' not in st.session_state:
+    st.session_state.data = {}
 
-# --- FEEDBACK SYSTEEM ---
-if submitted:
-    SYSTEM_PROMPT = """Je bent de PXL Didactiek Coach. Analyseer de input op basis van de Kijkwijzer Lesvoorbereiding[cite: 5].
-    Hanteer deze structuur:
-    1. **Sterke punten:** Wat sluit goed aan bij de PXL-didactiek en bouwstenen? [cite: 120]
-    2. **Kritische reflectie:** Stel 1 socratische vraag over de aansluiting bij de 12 bouwstenen of de Bloom-taxonomie[cite: 96, 120].
-    3. **Didactische tip:** Geef een concrete aanwijzing voor verbetering.
+# Menu voor navigatie door het sjabloon
+stap = st.radio("Navigeer door het sjabloon:", 
+                ["1. Identificatie & Beginsituatie", "2. Leerdoelen & Leerplan", "3. Lesuitwerking", "4. Lesschema & Bronnen"])
+
+# Stap 1: Identificatie & Beginsituatie [cite: 177, 178]
+if stap == "1. Identificatie & Beginsituatie":
+    with st.form("stap1"):
+        st.subheader("Identificatie van de les")
+        st.session_state.data['school'] = st.text_input("School")
+        st.session_state.data['leervak'] = st.text_input("Leervak")
+        st.session_state.data['onderwerp'] = st.text_input("Lesonderwerp")
+        
+        st.subheader("Didactische beginsituatie")
+        st.session_state.data['praktisch'] = st.text_area("Praktisch (lokaal, materiaal, ...)")
+        st.session_state.data['leerling'] = st.text_area("Leerling (interesses, relaties, problemen)")
+        st.session_state.data['vakinhoud'] = st.text_area("Vakinhoudelijk (voorkennis, ervaring)")
+        st.form_submit_button("Opslaan")
+
+# Stap 2: Leerdoelen & Leerplan [cite: 179, 180]
+elif stap == "2. Leerdoelen & Leerplan":
+    with st.form("stap2"):
+        st.subheader("Situering in leerplan")
+        st.session_state.data['leerplan'] = st.text_input("Geraadpleegd leerplan (titel/nummer)")
+        
+        st.subheader("Lesdoelen (Bloom)")
+        st.session_state.data['cognitief'] = st.text_area("Cognitief (+ ref leerplandoel)")
+        st.session_state.data['psycho'] = st.text_area("Psychomotorisch (+ ref leerplandoel)")
+        st.session_state.data['affectief'] = st.text_area("Affectief (+ ref leerplandoel)")
+        st.form_submit_button("Opslaan")
+
+# Stap 3: Lesuitwerking 
+elif stap == "3. Lesuitwerking":
+    st.info("Vul per lesfase de kolommen in: DW, LM, DB, DF, LKR/LL gedrag.")
+    st.session_state.data['uitwerking'] = st.text_area("Gedetailleerde Lesuitwerking (Aanknoping, Uitvoering, Afronding)", height=400)
+
+# Stap 4: Lesschema, Bronnen & Feedback [cite: 183, 185]
+elif stap == "4. Lesschema & Bronnen":
+    st.session_state.data['schema'] = st.text_area("Lesschema (Kern van de les)")
+    st.session_state.data['bronnen'] = st.text_area("Leermiddelen & Geraadpleegde bronnen (APA)")
     
-    Wees bemoedigend maar scherp."""
-    
-    input_text = f"Beginsituatie: {beginsituatie}\nDoelen: {doelen}\nUitwerking: {uitwerking}\nSchema: {schema}"
-    
-    with st.spinner('De coach toetst aan de PXL-richtlijnen...'):
-        response = model.generate_content(SYSTEM_PROMPT + "\n\nInput: " + input_text)
+    if st.button("Genereer didactisch advies"):
+        # Hier wordt alle data gecombineerd en naar de AI gestuurd
+        prompt = f"Analyseer deze lesvoorbereiding op basis van de PXL-kijkwijzer: {st.session_state.data}"
+        response = model.generate_content(prompt)
         st.markdown("### Feedback van de PXL Coach")
         st.write(response.text)
