@@ -6,6 +6,25 @@ from kennisbank import KNOWLEDGE_BASE  # Zorg dat je kennisbank.py dit gebruikt
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 model = genai.GenerativeModel('gemini-pro')
 
+def geef_tussentijdse_feedback(sectie, input_data):
+    # Haal de specifieke theorie op uit je KNOWLEDGE_BASE
+    theorie = KNOWLEDGE_BASE.get(sectie, "Toets aan de algemene didactische PXL-normen.")
+    
+    prompt = f"""
+    Je bent de PXL Didactiek Coach. Beoordeel de volgende input voor de sectie '{sectie}':
+    
+    RICHTLIJNEN: {theorie}
+    STUDENT INPUT: {input_data}
+    
+    Geef je feedback in de vorm van:
+    1. **Sterkte**: Wat voldoet er al aan de PXL-normen?
+    2. **Ontbreekt**: Wat mis je op basis van de theorie?
+    3. **Socratische vraag**: Stel één verdiepende vraag die de student dwingt de cursustekst beter te gebruiken.
+    """
+    
+    response = model.generate_content(prompt)
+    return response.text
+
 st.set_page_config(page_title="PXL Lesvoorbereiding", layout="wide")
 
 # PXL Huisstijl
@@ -29,56 +48,38 @@ stap = st.radio("Navigeer door het sjabloon:",
 # --- Stap 1 ---
 if stap == "1. Identificatie & Beginsituatie":
     with st.form("stap1"):
-        st.subheader("Didactische beginsituatie")
-        st.session_state.data['praktisch'] = st.text_area("Praktisch (lokaal, materiaal)")
-        st.session_state.data['leerling'] = st.text_area("Leerlingkenmerken (sociaal, motivatie, taal)")
-        st.session_state.data['vakinhoud'] = st.text_area("Vakinhoudelijk (voorkennis, metacognitie)")
-        st.form_submit_button("Opslaan")
+        praktisch = st.text_area("Praktisch (lokaal, materiaal)", value=st.session_state.data.get('praktisch', ''))
+        leerling = st.text_area("Leerlingkenmerken", value=st.session_state.data.get('leerling', ''))
+        if st.form_submit_button("Feedback op Beginsituatie"):
+            st.session_state.data.update({'praktisch': praktisch, 'leerling': leerling})
+            with st.spinner("Analyseert..."):
+                st.info(geef_tussentijdse_feedback("beginsituatie", f"{praktisch} {leerling}"))
 
 # --- Stap 2 ---
 elif stap == "2. Leerdoelen & Leerplan":
     with st.form("stap2"):
-        st.subheader("Lesdoelen (Bloom)")
-        st.session_state.data['cognitief'] = st.text_area("Cognitief (+ ref leerplandoel, onderstreep handelingswerkwoord)")
-        st.session_state.data['psycho_affectief'] = st.text_area("Psychomotorisch & Affectief")
-        st.form_submit_button("Opslaan")
+        cognitief = st.text_area("Cognitieve doelen (onderstreep werkwoorden)", value=st.session_state.data.get('cognitief', ''))
+        if st.form_submit_button("Feedback op Leerdoelen"):
+            st.session_state.data['cognitief'] = cognitief
+            with st.spinner("Toetst aan Bloom..."):
+                st.info(geef_tussentijdse_feedback("leerdoelen", cognitief))
 
-# --- Stap 3: Gestructureerde Fasering (H6) ---
+# --- Stap 3 ---
 elif stap == "3. Lesuitwerking":
-    st.subheader("Gedetailleerde Lesuitwerking (H6)")
     with st.form("stap3"):
-        st.session_state.data['fase_aanknoping'] = st.text_area("1. Aanknoping (Motivatie, voorkennis, doelstelling)", height=150)
-        st.session_state.data['fase_uitvoering'] = st.text_area("2. Uitvoering (Kern, actieve verwerking, differentiatie)", height=250)
-        st.session_state.data['fase_afronding'] = st.text_area("3. Afronding (Consolidatie, herhaling, vooruitblik)", height=150)
-        st.form_submit_button("Opslaan lesuitwerking")
+        aanknoping = st.text_area("Aanknoping (Motivatie/Voorkennis)", value=st.session_state.data.get('fase_aanknoping', ''))
+        uitvoering = st.text_area("Uitvoering (Kern/Bouwstenen)", value=st.session_state.data.get('fase_uitvoering', ''))
+        afronding = st.text_area("Afronding (Consolidatie)", value=st.session_state.data.get('fase_afronding', ''))
+        if st.form_submit_button("Feedback op Uitwerking"):
+            st.session_state.data.update({'fase_aanknoping': aanknoping, 'fase_uitvoering': uitvoering, 'fase_afronding': afronding})
+            with st.spinner("Toetst aan H6 en Bouwstenen..."):
+                st.info(geef_tussentijdse_feedback("lesuitwerking", f"{aanknoping} {uitvoering} {afronding}"))
 
-# --- Stap 4: Analyse & Feedback ---
+# --- Stap 4 ---
 elif stap == "4. Lesschema & Bronnen":
-    st.session_state.data['schema'] = st.text_area("Lesschema (Kern van de les)")
-    st.session_state.data['bronnen'] = st.text_area("Leermiddelen (APA)")
-    
-    if st.button("Genereer didactisch advies"):
-        # Alle kennis uit kennisbank.py ophalen
-        complete_context = "\n\n".join(KNOWLEDGE_BASE.values())
-        
-        system_prompt = f"""
-        Je bent de PXL Didactiek Coach. Analyseer de lesvoorbereiding op basis van:
-        {complete_context}
-        
-        GEEF PER FASE FEEDBACK:
-        1. AANKNOPING: Wordt voorkennis geactiveerd? Is het doel helder voor de leerling?
-        2. UITVOERING: Worden de 12 bouwstenen toegepast? Is er differentiatie (UDL/CLIM)? 
-           Is de cognitieve belasting optimaal?
-        3. AFRONDING: Geen nieuwe leerstof! Is het consolidatiemoment (bordschema) duidelijk?
-        
-        CHECK LEERDOELEN: Zijn de handelingswerkwoorden onderstreept en gekoppeld aan leerplannummers?
-        
-        STIJL: Socratisch. Stel vragen die de student helpen kritisch na te denken.
-        """
-        
-        prompt = f"{system_prompt}\n\nINPUT STUDENT: {st.session_state.data}"
-        
-        with st.spinner('De coach analyseert op basis van de cursusteksten...'):
-            response = model.generate_content(prompt)
+    if st.button("Genereer definitief didactisch advies"):
+        full_context = "\n\n".join(KNOWLEDGE_BASE.values())
+        prompt = f"Geef een integraal advies op basis van deze data: {st.session_state.data}\n\nRichtlijnen: {full_context}"
+        with st.spinner('De coach analyseert de volledige voorbereiding...'):
             st.markdown("### Feedback van de PXL Coach")
-            st.write(response.text)
+            st.write(model.generate_content(prompt).text)
