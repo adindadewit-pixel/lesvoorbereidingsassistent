@@ -4,7 +4,7 @@ from kennisbank import KNOWLEDGE_BASE  # Zorg dat je kennisbank.py dit gebruikt
 
 # Configuratie
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def geef_tussentijdse_feedback(sectie, input_data):
     # Haal de specifieke theorie op uit je KNOWLEDGE_BASE
