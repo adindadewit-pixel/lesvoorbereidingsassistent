@@ -1,6 +1,9 @@
 [theme]
-primaryColor = "#E30613"
+# Gebruik Rijk Zwart voor tekst
+textColor = "#030203"
+# Gebruik Wit voor achtergronden
 backgroundColor = "#FFFFFF"
+# Gebruik de Goud-accentkleur voor interactieve elementen (buttons, links)
+primaryColor = "#AE9A64"
 secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
 font = "sans serif"
